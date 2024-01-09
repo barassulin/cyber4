@@ -14,7 +14,7 @@ import logging
 
 # Constants
 WEB_ROOT = "C:/cyber/cyber4n/webroot"  # Adjust this to your web document root
-DEFAULT_URL = "/index.html"
+DEFAULT_URL = "/index.htmll"
 
 QUEUE_LEN = 1
 IP = '0.0.0.0'
@@ -39,14 +39,7 @@ def get_file_data(file_name):
         data = file.read()
     return data
 
-    """,
-        "/forbidden": "FORBIDDEN .403",
-        "/error": "500 ERROR SERVER INTERNAL",
-        400: "400 REQUEST BAD",
-        404: "404 FOUND NOT"
-    """
-    
-    
+
 def handle_client_request(resource, client_socket):
     """
     Check the required resource, generate proper HTTP response and send
@@ -65,33 +58,44 @@ def handle_client_request(resource, client_socket):
         http_response = f"HTTP/1.1 302 Found\r\nLocation:{new_uri}\r\n\r\n".encode()
         client_socket.send(http_response)
         return
-    data = get_file_data(uri)
-    leng = len(data)
-    file_type = uri.split(".")[-1]
 
-    if file_type == "html":
-        http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {leng}\r\n\r\n"
-    elif file_type == "jpg":
-        http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {leng}\r\n\r\n"
-    elif file_type == 'gif':
-        http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {leng}\r\n\r\n"
-    elif file_type == "css":
-        http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/css\r\nContent-Length: {leng}\r\n\r\n"
-    elif file_type == "js":
-        http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/javascript;charset=UTF-8\r\nContent-Length: {leng}\r\n\r\n"
-    elif file_type == "txt":
-        http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {leng}\r\n\r\n"
-    elif file_type == "ico":
-        http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/x-icon\r\nContent-Length: {leng}\r\n\r\n"
-    elif file_type == "png":
-        http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {leng}\r\n\r\n"
-    else:
+    try:
+        data = get_file_data(uri)
+        leng = len(data)
+        file_type = uri.split(".")[-1]
+
+        if file_type == "html":
+            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {leng}\r\n\r\n"
+        elif file_type == "jpg":
+            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {leng}\r\n\r\n"
+        elif file_type == 'gif':
+            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {leng}\r\n\r\n"
+        elif file_type == "css":
+            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/css\r\nContent-Length: {leng}\r\n\r\n"
+        elif file_type == "js":
+            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/javascript;charset=UTF-8\r\nContent-Length: {leng}\r\n\r\n"
+        elif file_type == "txt":
+            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {leng}\r\n\r\n"
+        elif file_type == "ico":
+            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/x-icon\r\nContent-Length: {leng}\r\n\r\n"
+        elif file_type == "png":
+            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {leng}\r\n\r\n"
+        else:
+            http_header = "HTTP/1.1 404 Not Found\r\n\r\n"
+
+        http_response = http_header.encode() + data
+        client_socket.send(http_response)
+        logging.debug("sending response" + http_header)
+
+    except FileNotFoundError:
         http_header = "HTTP/1.1 404 Not Found\r\n\r\n"
+        client_socket.send(http_header.encode())
+        logging.debug("sending response" + http_header)
 
-    http_response = http_header.encode() + data
-    client_socket.send(http_response)
-    logging.debug("sending response" + http_header)
-
+    except Exception as err:
+        http_header = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
+        client_socket.send(http_header.encode())
+        logging.error("Internal server error: " + str(err))
 
 def validate_http_request(request):
     """
@@ -125,10 +129,18 @@ def handle_client(client_socket):
             print('Got a valid HTTP request')
             handle_client_request(resource, client_socket)
         else:
+            http_header = "HTTP/1.1 400 Request Bad\r\n\r\n"
+            client_socket.send(http_header.encode())
+            logging.debug("sending response" + http_header)
             print('Error: Not a valid HTTP request')
-            break
+            #break
     print('Closing connection')
-
+    """,
+        "/forbidden": "FORBIDDEN .403",
+        "/error": "500 ERROR SERVER INTERNAL",
+        400: "400 REQUEST BAD" - get valid
+        404: "404 FOUND NOT" - uri
+    """
 
 def main():
      my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
