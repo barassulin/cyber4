@@ -32,12 +32,16 @@ def get_file_data(file_name):
     """
     Get data from file
     :param file_name: the name of the file
-    :return: the file data in a string
+    :return: the file992/ data in a string
     """
-    file_path = WEB_ROOT + file_name
-    with open(file_path, "rb") as file:
-        data = file.read()
-    return data
+    try:
+        file_path = WEB_ROOT + file_name
+        with open(file_path, "rb") as file:
+            data = file.read()
+    except Exception as err:
+        data = None
+    finally:
+        return data
 
 
 def handle_client_request(resource, client_socket):
@@ -67,6 +71,7 @@ def handle_client_request(resource, client_socket):
         file_type = uri.split(".")[-1]
         if file_type == "html" or file_type =="jpg" or file_type =="gif" or file_type =="css" or file_type =="js" or file_type =="txt" or file_type =="ico" or file_type =="png":
             data = get_file_data(uri)
+            
             leng = len(data)
             if file_type == "html":
                 http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {leng}\r\n\r\n"
@@ -145,4 +150,6 @@ def main():
          my_socket.close()
 
 if __name__ == "__main__":
-     main()
+    logging.basicConfig(format=LOG_FORMAT, filename=LOG_FILE, level=LOG_LEVEL)
+
+    main()
