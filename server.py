@@ -7,7 +7,6 @@ other utilities, for educational purpose
 Usage: Fill the missing functions and constants
 """
 
-import os
 import socket
 import re
 import logging
@@ -52,6 +51,7 @@ def handle_client_request(resource, client_socket):
     :param client_socket: a socket for the communication with the client
     :return: None
     """
+    global http_header
     if resource == '/':
         uri = DEFAULT_URL
     else:
@@ -69,9 +69,10 @@ def handle_client_request(resource, client_socket):
         http_response = http_response.encode()
     else:
         file_type = uri.split(".")[-1]
-        if file_type == "html" or file_type =="jpg" or file_type =="gif" or file_type =="css" or file_type =="js" or file_type =="txt" or file_type =="ico" or file_type =="png":
+        if (file_type == "html" or file_type == "jpg" or file_type == "gif" or file_type == "css" or file_type == "js"
+                or file_type == "txt" or file_type == "ico" or file_type == "png"):
             data = get_file_data(uri)
-            
+
             leng = len(data)
             if file_type == "html":
                 http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {leng}\r\n\r\n"
@@ -82,7 +83,8 @@ def handle_client_request(resource, client_socket):
             elif file_type == "css":
                 http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/css\r\nContent-Length: {leng}\r\n\r\n"
             elif file_type == "js":
-                http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/javascript;charset=UTF-8\r\nContent-Length: {leng}\r\n\r\n"
+                http_header = (f"HTTP/1.1 200 OK\r\nContent-Type: text/javascript;charset=UTF-8\r\nContent-Length: "
+                               f"{leng}\r\n\r\n")
             elif file_type == "txt":
                 http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {leng}\r\n\r\n"
             elif file_type == "ico":
@@ -118,38 +120,48 @@ def handle_client(client_socket):
     """
     print('Client connected')
     while True:
-        client_request = client_socket.recv(1024).decode()
-        logging.debug("getting client request " + client_request)
-        valid_http, resource = validate_http_request(client_request)
-        if valid_http:
-            print('Got a valid HTTP request')
-            handle_client_request(resource, client_socket)
-        else:
-            http_header = "HTTP/1.1 400 Request Bad\r\n\r\n"
-            client_socket.send(http_header.encode())
-            logging.debug("sending response" + http_header)
-            print('Error: Not a valid HTTP request')
-            break
+        try:
+            client_request = client_socket.recv(1024).decode()
+            logging.debug("getting client request " + client_request)
+            valid_http, resource = validate_http_request(client_request)
+            if valid_http:
+                print('Got a valid HTTP request')
+                handle_client_request(resource, client_socket)
+            else:
+                http_header = "HTTP/1.1 400 Request Bad\r\n\r\n"
+                client_socket.send(http_header.encode())
+                logging.debug("sending response" + http_header)
+                print('Error: Not a valid HTTP request')
+                break
+        except Exception as err:  # Catch any unexpected errors
+            logging.error("Error handling client request: " + str(err))
+            break  # Close the connection to prevent further issues
+
     print('Closing connection')
 
 
 def main():
-     my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-     try:
-         my_socket.bind((IP, PORT))
-         my_socket.listen(QUEUE_LEN)
-         while True:
+    my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        my_socket.bind((IP, PORT))
+        my_socket.listen(QUEUE_LEN)
+        while True:
             client_socket, client_address = my_socket.accept()
             handle_client(client_socket)
 
-     except socket.error as err:
-         """logging.error("received socket error on server socket" + str(err))"""
-         print('received socket error on server socket' + str(err))
+    except socket.error as err:
+        logging.error("received socket error on server socket" + str(err))
 
-     finally:
-         my_socket.close()
+    finally:
+        my_socket.close()
+
 
 if __name__ == "__main__":
     logging.basicConfig(format=LOG_FORMAT, filename=LOG_FILE, level=LOG_LEVEL)
 
+    valid_request = "GET /index.html HTTP/1.1"
+    assert validate_http_request(valid_request) == (True, "/index.html")
+
+    invalid_request = "INVALID_REQUEST"
+    assert validate_http_request(invalid_request) == (False, None)
     main()
