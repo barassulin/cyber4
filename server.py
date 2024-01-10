@@ -14,7 +14,7 @@ import logging
 
 # Constants
 WEB_ROOT = "C:/cyber/cyber4n/webroot"  # Adjust this to your web document root
-DEFAULT_URL = "/index.htmll"
+DEFAULT_URL = "/index.html"
 
 QUEUE_LEN = 1
 IP = '0.0.0.0'
@@ -52,18 +52,17 @@ def handle_client_request(resource, client_socket):
         uri = DEFAULT_URL
     else:
         uri = resource
-    http_response = "HTTP/1.1 404 Not Found\r\n\r\n"
-    http_response=http_response.encode()
+    http_response = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"
+    http_response = http_response.encode()
     if uri in REDIRECTION_DICTIONARY:
-        new_uri = REDIRECTION_DICTIONARY[uri]
-        http_response = f"HTTP/1.1 302 Found\r\nLocation:{new_uri}\r\n\r\n".encode()
-
-    elif uri == "/forbidden":
-        http_response = "HTTP/1.1 403 forbidden\r\n\r\n"
+        uri = REDIRECTION_DICTIONARY[uri]
+        http_response = f"HTTP/1.1 302 Found\r\nLocation: {uri}\r\n\r\n".encode()
+    if uri == "/forbidden":
+        http_response = "HTTP/1.1 403 forbidden\r\nContent-Length: 0\r\n\r\n"
         http_response = http_response.encode()
     elif uri == "/error":
-        http_response = "HTTP/1.1 500 ERROR SERVER INTERNAL\r\n\r\n"
-        http_response=http_response.encode()
+        http_response = "HTTP/1.1 500 ERROR SERVER INTERNAL\r\nContent-Length: 0\r\n\r\n"
+        http_response = http_response.encode()
     else:
         file_type = uri.split(".")[-1]
         if file_type == "html" or file_type =="jpg" or file_type =="gif" or file_type =="css" or file_type =="js" or file_type =="txt" or file_type =="ico" or file_type =="png":
@@ -125,14 +124,9 @@ def handle_client(client_socket):
             client_socket.send(http_header.encode())
             logging.debug("sending response" + http_header)
             print('Error: Not a valid HTTP request')
-            #break
+            break
     print('Closing connection')
-    """,
-        "/forbidden": "FORBIDDEN .403",
-        "/error": "500 ERROR SERVER INTERNAL",
-        400: "400 REQUEST BAD" - get valid
-        404: "404 FOUND NOT" - uri
-    """
+
 
 def main():
      my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
