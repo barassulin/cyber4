@@ -52,50 +52,42 @@ def handle_client_request(resource, client_socket):
         uri = DEFAULT_URL
     else:
         uri = resource
-
+    http_response = "HTTP/1.1 404 Not Found\r\n\r\n"
+    http_response=http_response.encode()
     if uri in REDIRECTION_DICTIONARY:
         new_uri = REDIRECTION_DICTIONARY[uri]
         http_response = f"HTTP/1.1 302 Found\r\nLocation:{new_uri}\r\n\r\n".encode()
-        client_socket.send(http_response)
-        return
 
-    try:
-        data = get_file_data(uri)
-        leng = len(data)
+    elif uri == "/forbidden":
+        http_response = "HTTP/1.1 403 forbidden\r\n\r\n"
+        http_response = http_response.encode()
+    elif uri == "/error":
+        http_response = "HTTP/1.1 500 ERROR SERVER INTERNAL\r\n\r\n"
+        http_response=http_response.encode()
+    else:
         file_type = uri.split(".")[-1]
+        if file_type == "html" or file_type =="jpg" or file_type =="gif" or file_type =="css" or file_type =="js" or file_type =="txt" or file_type =="ico" or file_type =="png":
+            data = get_file_data(uri)
+            leng = len(data)
+            if file_type == "html":
+                http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {leng}\r\n\r\n"
+            elif file_type == "jpg":
+                http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {leng}\r\n\r\n"
+            elif file_type == 'gif':
+                http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {leng}\r\n\r\n"
+            elif file_type == "css":
+                http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/css\r\nContent-Length: {leng}\r\n\r\n"
+            elif file_type == "js":
+                http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/javascript;charset=UTF-8\r\nContent-Length: {leng}\r\n\r\n"
+            elif file_type == "txt":
+                http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {leng}\r\n\r\n"
+            elif file_type == "ico":
+                http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/x-icon\r\nContent-Length: {leng}\r\n\r\n"
+            elif file_type == "png":
+                http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {leng}\r\n\r\n"
+            http_response = http_header.encode() + data
+    client_socket.send(http_response)
 
-        if file_type == "html":
-            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: {leng}\r\n\r\n"
-        elif file_type == "jpg":
-            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {leng}\r\n\r\n"
-        elif file_type == 'gif':
-            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/jpeg\r\nContent-Length: {leng}\r\n\r\n"
-        elif file_type == "css":
-            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/css\r\nContent-Length: {leng}\r\n\r\n"
-        elif file_type == "js":
-            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/javascript;charset=UTF-8\r\nContent-Length: {leng}\r\n\r\n"
-        elif file_type == "txt":
-            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {leng}\r\n\r\n"
-        elif file_type == "ico":
-            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/x-icon\r\nContent-Length: {leng}\r\n\r\n"
-        elif file_type == "png":
-            http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {leng}\r\n\r\n"
-        else:
-            http_header = "HTTP/1.1 404 Not Found\r\n\r\n"
-
-        http_response = http_header.encode() + data
-        client_socket.send(http_response)
-        logging.debug("sending response" + http_header)
-
-    except FileNotFoundError:
-        http_header = "HTTP/1.1 404 Not Found\r\n\r\n"
-        client_socket.send(http_header.encode())
-        logging.debug("sending response" + http_header)
-
-    except Exception as err:
-        http_header = "HTTP/1.1 500 Internal Server Error\r\n\r\n"
-        client_socket.send(http_header.encode())
-        logging.error("Internal server error: " + str(err))
 
 def validate_http_request(request):
     """
