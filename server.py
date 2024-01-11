@@ -5,6 +5,7 @@ Purpose: Provide a basis for Ex. 4
 Note: The code is written in a simple way, without classes, log files or
 other utilities, for educational purpose
 Usage: Fill the missing functions and constants
+Filled by: Bar Assulin
 """
 
 import socket
@@ -19,7 +20,7 @@ QUEUE_LEN = 1
 IP = '0.0.0.0'
 PORT = 8080
 SOCKET_TIMEOUT = 2
-REDIRECTION_DICTIONARY = {"/moved": DEFAULT_URL}
+REDIRECTION_DICTIONARY = {"/moved": "/"}
 
 LOG_FORMAT = '%(levelname)s | %(asctime)s | %(processName)s | %(message)s'
 LOG_LEVEL = logging.DEBUG
@@ -33,12 +34,13 @@ def get_file_data(file_name):
     :param file_name: the name of the file
     :return: the file992/ data in a string
     """
+    data = None
     try:
         file_path = WEB_ROOT + file_name
         with open(file_path, "rb") as file:
             data = file.read()
     except Exception as err:
-        data = None
+        logging.error("received error: " + str(err))
     finally:
         return data
 
@@ -51,7 +53,6 @@ def handle_client_request(resource, client_socket):
     :param client_socket: a socket for the communication with the client
     :return: None
     """
-    global http_header
     if resource == '/':
         uri = DEFAULT_URL
     else:
@@ -91,6 +92,9 @@ def handle_client_request(resource, client_socket):
                 http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/x-icon\r\nContent-Length: {leng}\r\n\r\n"
             elif file_type == "png":
                 http_header = f"HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: {leng}\r\n\r\n"
+            else:
+                http_header = "HTTP/1.1 500 ERROR SERVER INTERNAL\r\nContent-Length: 0\r\n\r\n"
+                data = None
             http_response = http_header.encode() + data
     client_socket.send(http_response)
 
@@ -122,6 +126,8 @@ def handle_client(client_socket):
     while True:
         try:
             client_request = client_socket.recv(1024).decode()
+            while '\r\n\r\n' not in client_request:
+                client_request = client_request + client_socket.recv(1).decode()
             logging.debug("getting client request " + client_request)
             valid_http, resource = validate_http_request(client_request)
             if valid_http:
@@ -141,17 +147,26 @@ def handle_client(client_socket):
 
 
 def main():
+    # Open a socket and loop forever while waiting for clients
     my_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
+        print("Listening for connections on port %d" % PORT)
         my_socket.bind((IP, PORT))
         my_socket.listen(QUEUE_LEN)
         while True:
             client_socket, client_address = my_socket.accept()
-            handle_client(client_socket)
-
+            try:
+                print('New connection received')
+                client_socket.settimeout(SOCKET_TIMEOUT)
+                handle_client(client_socket)
+            except socket.error as err:
+                logging.error("received socket error on client socket" + str(err))
+                print('received socket exception - ' + str(err))
+            finally:
+                client_socket.close()
     except socket.error as err:
         logging.error("received socket error on server socket" + str(err))
-
+        print('received socket exception - ' + str(err))
     finally:
         my_socket.close()
 
@@ -164,4 +179,5 @@ if __name__ == "__main__":
 
     invalid_request = "INVALID_REQUEST"
     assert validate_http_request(invalid_request) == (False, None)
+    # Call the main handler function
     main()
